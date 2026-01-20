@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { getAllLanguagesService } from '@/requests/commit'
 import { ElMessage } from 'element-plus'
+import { RefreshLeft } from '@element-plus/icons-vue'
 import CodeEditor from './CodeEditor.vue'
 
 interface Language {
@@ -19,11 +20,10 @@ const emit = defineEmits<{
   submit: []
 }>()
 
-// 自测和提交按钮由父组件控制，不在此组件显示
-
 const languages = ref<Language[]>([])
 const selectedLanguageId = ref<number>()
 const code = ref('')
+const codeEditorRef = ref<InstanceType<typeof CodeEditor> | null>(null)
 
 const selectedLanguageName = computed(() => {
   if (!selectedLanguageId.value) return ''
@@ -69,6 +69,29 @@ watch(
   }
 )
 
+const handleResetCode = () => {
+  if (selectedLanguageId.value) {
+    const storageKey = `code_${props.questionId}_${selectedLanguageId.value}`
+    localStorage.removeItem(storageKey)
+    if (codeEditorRef.value) {
+      codeEditorRef.value.resetCode()
+    }
+    ElMessage.success('已还原为默认代码')
+  }
+}
+
+const getCode = () => {
+  return code.value || ''
+}
+
+const getLanguageId = () => {
+  return selectedLanguageId.value
+}
+
+defineExpose({
+  getCode,
+  getLanguageId
+})
 </script>
 
 <template>
@@ -82,10 +105,16 @@ watch(
           :value="lang.id"
         />
       </el-select>
+      <el-tooltip content="还原默认代码" placement="top">
+        <el-icon class="reset-icon" @click="handleResetCode">
+          <RefreshLeft />
+        </el-icon>
+      </el-tooltip>
     </div>
     <div class="editor-content">
       <CodeEditor
         v-if="selectedLanguageName && selectedLanguageId"
+        ref="codeEditorRef"
         :question-id="questionId"
         :language-id="selectedLanguageId"
         :language-name="selectedLanguageName"
@@ -107,9 +136,21 @@ watch(
   .editor-header {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     padding: 8px 20px;
     background: #fafafa;
     border-bottom: 1px solid #e8e8e8;
+
+    .reset-icon {
+      font-size: 18px;
+      cursor: pointer;
+      color: #666;
+      transition: color 0.2s;
+
+      &:hover {
+        color: #409eff;
+      }
+    }
   }
 
   .editor-content {

@@ -16,6 +16,24 @@ const saveStatus = ref<'none' | 'saving' | 'saved'>('none')
 let editorView: EditorView | null = null
 let saveTimer: number | null = null
 
+// 暴露给父组件调用的方法
+defineExpose({
+  resetCode: () => {
+    if (editorView) {
+      const transaction = editorView.state.update({
+        changes: {
+          from: 0,
+          to: editorView.state.doc.length,
+          insert: ''
+        }
+      })
+      editorView.dispatch(transaction)
+      modelValue.value = ''
+      debouncedSave()
+    }
+  }
+})
+
 const getStorageKey = () => {
   return `code_${props.questionId}_${props.languageId}`
 }

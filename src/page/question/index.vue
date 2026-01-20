@@ -2,9 +2,13 @@
 import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { queryQuestionByIdService } from '@/requests/question'
+import { selfTestService } from '@/requests/commit'
 import { ElMessage } from 'element-plus'
 import QuestionDescription from '@/components/QuestionDescription.vue'
 import QuestionEditor from '@/components/QuestionEditor.vue'
+import TestCaseEditor from '@/components/TestCaseEditor.vue'
+import TestResult from '@/components/TestResult.vue'
+import useQuestionStore from '@/store/useQuestionStore'
 
 type TabType = 'description' | 'solution' | 'submissions' | 'testcases' | 'testresult'
 
@@ -14,6 +18,9 @@ const questionId = ref<number>(parseInt(route.params.question_id as string))
 
 const loading = ref(false)
 const activeTab = ref<TabType>('description')
+const questionStore = useQuestionStore()
+
+const questionEditorRef = ref<InstanceType<typeof QuestionEditor> | null>(null)
 
 const tabs = [
   { label: '题目描述', value: 'description' as TabType },
@@ -42,8 +49,126 @@ const loadQuestion = async () => {
   }
 }
 
-const handleRun = () => {
-  ElMessage.info('自测功能开发中')
+const getEncodedTestCases = () => {
+  const cases = questionStore.getTestCases(questionId.value)
+
+  // 过滤空的测试用例
+  const filtered = cases.filter(c => c.input.trim() || c.output.trim())
+  const validCases = filtered.length > 0 ? filtered : cases
+
+  const btoaSafe = (str: string) => {
+    try {
+      return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (_match, p1) => {
+        return String.fromCharCode(parseInt(p1, 16))
+      }))
+    } catch (e) {
+      return ''
+    }
+  }
+
+  return validCases.map(c => ({
+    inputBase64: btoaSafe(c.input),
+    outputBase64: btoaSafe(c.output)
+  }))
+}
+
+const validateTestCases = (): boolean => {
+  const cases = questionStore.getTestCases(questionId.value)
+  const MAX_SIZE = 2 * 1024
+
+  const getInputSize = (input: string) => new TextEncoder().encode(input).length
+  const getOutputSize = (output: string) => new TextEncoder().encode(output).length
+  const formatSize = (bytes: number) => `${bytes} B`
+
+  // 过滤后的用例数
+  const filtered = cases.filter(c => c.input.trim() || c.output.trim())
+  const validCases = filtered.length > 0 ? filtered : cases
+
+  if (validCases.length === 0) {
+    ElMessage.error('请至少添加一个有效的测试用例')
+    return false
+  }
+
+  for (let i = 0; i < validCases.length; i++) {
+    const testCase: any = validCases[i]
+    const inputSize = getInputSize(testCase.input)
+    const outputSize = getOutputSize(testCase.output)
+
+    if (inputSize > MAX_SIZE) {
+      ElMessage.error(`第 ${i + 1} 个测试用例的输入超过 ${formatSize(MAX_SIZE)} 限制`)
+      return false
+    }
+
+    if (outputSize > MAX_SIZE) {
+      ElMessage.error(`第 ${i + 1} 个测试用例的输出超过 ${formatSize(MAX_SIZE)} 限制`)
+      return false
+    }
+  }
+
+  return true
+}
+
+const handleRun = async () => {
+  if (!questionEditorRef.value) {
+    ElMessage.error('组件未初始化')
+    return
+  }
+
+  const code = questionEditorRef.value.getCode()
+  const languageId = questionEditorRef.value.getLanguageId()
+
+  if (!code.trim()) {
+    ElMessage.warning('请输入代码')
+    return
+  }
+
+  if (!languageId) {
+    ElMessage.warning('请选择编程语言')
+    return
+  }
+
+  if (!validateTestCases()) {
+    return
+  }
+
+  const selfTestCases = getEncodedTestCases()
+
+  if (selfTestCases.length === 0) {
+    ElMessage.warning('请添加测试用例')
+    return
+  }
+
+  questionStore.isSelfTestingMap[questionId.value] = true
+  questionStore.selfTestResultMap[questionId.value] = null
+
+  try {
+    await selfTestService(
+      {
+        questionId: questionId.value,
+        code,
+        languageId,
+        selfTestCases
+      },
+      (result) => {
+        questionStore.selfTestResultMap[questionId.value] = result
+      }
+    )
+    ElMessage.success('自测完成')
+    activeTab.value = 'testresult'
+  } catch (error: any) {
+    ElMessage.error(error.message || '自测失败')
+    questionStore.selfTestResultMap[questionId.value] = {
+      finish: true,
+      judgeCaseNum: 0,
+      acceptNum: 0,
+      commitResult: 7,
+      consumeTime: 0,
+      consumeMemory: 0
+    }
+    activeTab.value = 'testresult'
+  } finally {
+    questionStore.isSelfTestingMap[questionId.value] = false
+  }
 }
 
 const handleSubmit = () => {
@@ -72,8 +197,8 @@ watch(activeTab, (newTab) => {
     <div v-if="question" class="page-header">
       <el-button @click="router.push('/questionset')">返回题库</el-button>
       <div class="header-actions">
-        <el-button type="success" @click="handleRun">自测</el-button>
-        <el-button type="primary" @click="handleSubmit">提交</el-button>
+        <el-button type="success" @click="handleRun" :loading="questionStore.isSelfTestingMap[questionId]" :disabled="questionStore.isSelfTestingMap[questionId]">自测</el-button>
+        <el-button type="primary" @click="handleSubmit" :disabled="questionStore.isSelfTestingMap[questionId]">提交</el-button>
       </div>
     </div>
     <div v-if="question" class="question-container">
@@ -101,16 +226,15 @@ watch(activeTab, (newTab) => {
           <div v-else-if="activeTab === 'submissions'" class="empty-placeholder">
             提交记录功能开发中
           </div>
-          <div v-else-if="activeTab === 'testcases'" class="empty-placeholder">
-            测试用例功能开发中
-          </div>
-          <div v-else-if="activeTab === 'testresult'" class="empty-placeholder">
-            测试结果功能开发中
-          </div>
+          <TestCaseEditor v-else-if="activeTab === 'testcases'" :question-id="questionId" />
+          <TestResult
+            v-else-if="activeTab === 'testresult'"
+            :question-id="questionId"
+          />
         </div>
       </div>
       <div class="right-panel">
-        <QuestionEditor :question-id="questionId" @run="handleRun" @submit="handleSubmit" />
+        <QuestionEditor :question-id="questionId" ref="questionEditorRef" @run="handleRun" @submit="handleSubmit" />
       </div>
     </div>
   </div>
