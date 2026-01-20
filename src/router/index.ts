@@ -7,6 +7,10 @@ export default createRouter({
     {
       path: '/login',
       component: () => import('../page/login/index.vue')
+    },
+    {
+      path: '/questionset',
+      component: () => import('../page/questionset/index.vue')
     }
   ]
 })
