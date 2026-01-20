@@ -1,9 +1,11 @@
 <script lang="ts" setup>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { questionPageService } from '@/requests/question'
 import { ElMessage } from 'element-plus'
 import { Search, Refresh } from '@element-plus/icons-vue'
 
+const router = useRouter()
 const loading = ref(false)
 const questions = ref([])
 const total = ref(0)
@@ -79,8 +81,11 @@ const handleSizeChange = (size: number) => {
 }
 
 const viewQuestion = (id: number) => {
-  ElMessage.info(`查看题目详情: ${id}`)
-  // TODO: 跳转到题目详情页
+  router.push(`/question/${id}`)
+}
+
+const handleRowClick = (row: any) => {
+  viewQuestion(row.id)
 }
 
 onMounted(() => {
@@ -122,7 +127,13 @@ onMounted(() => {
     </div>
 
     <div class="question-list" v-loading="loading">
-      <el-table :data="questions" stripe style="width: 100%">
+      <el-table
+        :data="questions"
+        stripe
+        style="width: 100%"
+        @row-click="handleRowClick"
+        class="clickable-table"
+      >
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="title" label="标题" min-width="300" />
         <el-table-column label="难度" width="120">
@@ -130,13 +141,6 @@ onMounted(() => {
             <el-tag :type="getDifficultyTagType(row.difficulty)">
               {{ getDifficultyLabel(row.difficulty) }}
             </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="120" fixed="right">
-          <template #default="{ row }">
-            <el-button type="primary" link @click="viewQuestion(row.id)">
-              查看
-            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -193,8 +197,25 @@ onMounted(() => {
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 
-  :deep(.el-table__body tr:hover > td) {
-    background-color: #f5f7fa;
+  .clickable-table {
+    :deep(.el-table__body tr) {
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &:hover > td {
+        background-color: #e6f7ff;
+      }
+
+      &:hover {
+        transform: translateY(-1px);
+      }
+    }
+
+    :deep(.el-table__body tr) {
+      &:hover .el-tag {
+        transform: scale(1.05);
+      }
+    }
   }
 
   .pagination {
