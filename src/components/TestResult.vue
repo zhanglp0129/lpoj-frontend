@@ -6,6 +6,7 @@ import useQuestionStore from '@/store/useQuestionStore'
 
 interface Props {
   questionId: number
+  type: 'self' | 'commit'
 }
 
 const props = defineProps<Props>()
@@ -13,10 +14,19 @@ const props = defineProps<Props>()
 const questionStore = useQuestionStore()
 
 const isRunning = computed(() => {
-  return questionStore.isSelfTestingMap[props.questionId] || false
+  if (props.type === 'self') {
+    return questionStore.isSelfTestingMap[props.questionId] || false
+  } else {
+    return questionStore.isCommittingMap[props.questionId] || false
+  }
 })
+
 const result = computed(() => {
-  return questionStore.selfTestResultMap[props.questionId] || null
+  if (props.type === 'self') {
+    return questionStore.selfTestResultMap[props.questionId] || null
+  } else {
+    return questionStore.commitResultMap[props.questionId] || null
+  }
 })
 
 const progress = computed(() => {
@@ -30,7 +40,9 @@ const resultType = computed(() => {
 })
 
 const resultLabel = computed(() => {
-  if (!result.value) return '等待自测...'
+  if (!result.value) {
+    return '等待测试...'
+  }
   return CommitResultMap[result.value.commitResult] || '未知'
 })
 
@@ -45,11 +57,13 @@ const formatMemory = (bytes: number) => {
 }
 
 const statusIcon = computed(() => {
+  const labelText = props.type === 'self' ? '自测' : '提交'
+
   if (isRunning.value) {
     return {
       type: 'info',
       icon: '⏳',
-      text: '正在自测中...'
+      text: `正在${labelText}中...`
     }
   }
 
@@ -57,7 +71,7 @@ const statusIcon = computed(() => {
     return {
       type: 'info',
       icon: '📋',
-      text: '等待自测'
+      text: '等待测试'
     }
   }
 
@@ -66,7 +80,7 @@ const statusIcon = computed(() => {
   return {
     type: isPassing ? 'success' : 'danger',
     icon: isPassing ? '✅' : '❌',
-    text: isPassing ? '自测完成' : '自测失败'
+    text: isPassing ? `${labelText}完成` : `${labelText}失败`
   }
 })
 </script>
@@ -116,7 +130,7 @@ const statusIcon = computed(() => {
 
       <div class="empty-state" v-else>
         <div class="icon">📊</div>
-        <p>点击"自测"按钮开始测试</p>
+        <p>点击 <span class="highlight">自测</span> 或 <span class="highlight">提交</span> 按钮开始</p>
         <p class="tip">测试结果将在此处显示</p>
       </div>
     </div>
@@ -249,6 +263,17 @@ const statusIcon = computed(() => {
       &.tip {
         font-size: 12px;
         opacity: 0.7;
+      }
+
+      .highlight {
+        display: inline-block;
+        padding: 2px 2px;
+        margin: 0 0px;
+        background: #e8f4fd;
+        color: #1890ff;
+        border-radius: 4px;
+        font-weight: 600;
+        font-size: 13px;
       }
     }
   }

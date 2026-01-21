@@ -2,12 +2,13 @@
 import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { queryQuestionByIdService } from '@/requests/question'
-import { selfTestService } from '@/requests/commit'
+import { selfTestService, commitService } from '@/requests/commit'
 import { ElMessage } from 'element-plus'
 import QuestionDescription from '@/components/QuestionDescription.vue'
 import QuestionEditor from '@/components/QuestionEditor.vue'
 import TestCaseEditor from '@/components/TestCaseEditor.vue'
 import TestResult from '@/components/TestResult.vue'
+import SubmissionList from '@/components/SubmissionList.vue'
 import useQuestionStore from '@/store/useQuestionStore'
 
 type TabType = 'description' | 'solution' | 'submissions' | 'testcases' | 'testresult'
@@ -18,6 +19,7 @@ const questionId = ref<number>(parseInt(route.params.question_id as string))
 
 const loading = ref(false)
 const activeTab = ref<TabType>('description')
+const testResultType = ref<'self' | 'commit'>('self')
 const questionStore = useQuestionStore()
 
 const questionEditorRef = ref<InstanceType<typeof QuestionEditor> | null>(null)
@@ -140,6 +142,8 @@ const handleRun = async () => {
 
   questionStore.isSelfTestingMap[questionId.value] = true
   questionStore.selfTestResultMap[questionId.value] = null
+  testResultType.value = 'self'
+  activeTab.value = 'testresult'
 
   try {
     await selfTestService(
@@ -154,7 +158,6 @@ const handleRun = async () => {
       }
     )
     ElMessage.success('自测完成')
-    activeTab.value = 'testresult'
   } catch (error: any) {
     ElMessage.error(error.message || '自测失败')
     questionStore.selfTestResultMap[questionId.value] = {
@@ -165,14 +168,60 @@ const handleRun = async () => {
       consumeTime: 0,
       consumeMemory: 0
     }
-    activeTab.value = 'testresult'
   } finally {
     questionStore.isSelfTestingMap[questionId.value] = false
   }
 }
 
-const handleSubmit = () => {
-  ElMessage.info('提交功能开发中')
+const handleSubmit = async () => {
+  if (!questionEditorRef.value) {
+    ElMessage.error('组件未初始化')
+    return
+  }
+
+  const code = questionEditorRef.value.getCode()
+  const languageId = questionEditorRef.value.getLanguageId()
+
+  if (!code.trim()) {
+    ElMessage.warning('请输入代码')
+    return
+  }
+
+  if (!languageId) {
+    ElMessage.warning('请选择编程语言')
+    return
+  }
+
+  questionStore.isCommittingMap[questionId.value] = true
+  questionStore.commitResultMap[questionId.value] = null
+  testResultType.value = 'commit'
+  activeTab.value = 'testresult'
+
+  try {
+    await commitService(
+      {
+        questionId: questionId.value,
+        code,
+        languageId
+      },
+      (result) => {
+        questionStore.commitResultMap[questionId.value] = result
+      }
+    )
+    ElMessage.success('提交完成')
+  } catch (error: any) {
+    ElMessage.error(error.message || '提交失败')
+    questionStore.commitResultMap[questionId.value] = {
+      finish: true,
+      judgeCaseNum: 0,
+      acceptNum: 0,
+      commitResult: 7,
+      consumeTime: 0,
+      consumeMemory: 0
+    }
+  } finally {
+    questionStore.isCommittingMap[questionId.value] = false
+  }
 }
 
 // 从 URL 读取初始 tab
@@ -197,8 +246,8 @@ watch(activeTab, (newTab) => {
     <div v-if="question" class="page-header">
       <el-button @click="router.push('/questionset')">返回题库</el-button>
       <div class="header-actions">
-        <el-button type="success" @click="handleRun" :loading="questionStore.isSelfTestingMap[questionId]" :disabled="questionStore.isSelfTestingMap[questionId]">自测</el-button>
-        <el-button type="primary" @click="handleSubmit" :disabled="questionStore.isSelfTestingMap[questionId]">提交</el-button>
+        <el-button type="success" @click="handleRun" :loading="questionStore.isSelfTestingMap[questionId]" :disabled="questionStore.isSelfTestingMap[questionId] || questionStore.isCommittingMap[questionId]">自测</el-button>
+        <el-button type="primary" @click="handleSubmit" :loading="questionStore.isCommittingMap[questionId]" :disabled="questionStore.isSelfTestingMap[questionId] || questionStore.isCommittingMap[questionId]">提交</el-button>
       </div>
     </div>
     <div v-if="question" class="question-container">
@@ -223,13 +272,12 @@ watch(activeTab, (newTab) => {
           <div v-else-if="activeTab === 'solution'" class="empty-placeholder">
             题解功能开发中
           </div>
-          <div v-else-if="activeTab === 'submissions'" class="empty-placeholder">
-            提交记录功能开发中
-          </div>
+          <SubmissionList v-else-if="activeTab === 'submissions'" :question-id="questionId" />
           <TestCaseEditor v-else-if="activeTab === 'testcases'" :question-id="questionId" />
           <TestResult
             v-else-if="activeTab === 'testresult'"
             :question-id="questionId"
+            :type="testResultType"
           />
         </div>
       </div>

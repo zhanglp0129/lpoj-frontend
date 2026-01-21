@@ -12,9 +12,11 @@ export default defineStore('question', () => {
   // 按题目ID存储测试用例
   const testCasesMap = ref<Record<number, TestCase[]>>({})
 
-  // 按题目ID存储测试结果和自测状态
+  // 按题目ID存储测试结果和状态
   const selfTestResultMap = ref<Record<number, JudgeResult | null>>({})
   const isSelfTestingMap = ref<Record<number, boolean>>({})
+  const commitResultMap = ref<Record<number, JudgeResult | null>>({})
+  const isCommittingMap = ref<Record<number, boolean>>({})
 
   // 获取指定题目的测试用例
   const getTestCases = (questionId: number): TestCase[] => {
@@ -63,6 +65,8 @@ export default defineStore('question', () => {
     testCasesMap,
     selfTestResultMap,
     isSelfTestingMap,
+    commitResultMap,
+    isCommittingMap,
     getTestCases,
     setTestCases,
     addTestCase,
