@@ -6,12 +6,33 @@ import useLanguageStore from '@/store/useLanguageStore'
 import { marked } from 'marked'
 import katex from 'katex'
 import 'katex/dist/katex.min.css'
+import hljs from 'highlight.js'
+import 'highlight.js/styles/github.css'
+import cpp from 'highlight.js/lib/languages/cpp'
+import c from 'highlight.js/lib/languages/c'
+import java from 'highlight.js/lib/languages/java'
+import python from 'highlight.js/lib/languages/python'
+import go from 'highlight.js/lib/languages/go'
+import javascript from 'highlight.js/lib/languages/javascript'
+import typescript from 'highlight.js/lib/languages/typescript'
+
+hljs.registerLanguage('cpp', cpp)
+hljs.registerLanguage('c', c)
+hljs.registerLanguage('java', java)
+hljs.registerLanguage('python', python)
+hljs.registerLanguage('go', go)
+hljs.registerLanguage('javascript', javascript)
+hljs.registerLanguage('typescript', typescript)
 
 interface Props {
   questionId: number
 }
 
 const props = defineProps<Props>()
+
+const emit = defineEmits<{
+  copyToEditor: [code: string, languageId: number]
+}>()
 
 const languageStore = useLanguageStore()
 
@@ -130,6 +151,55 @@ const analyzeComplexity = async () => {
   }
 }
 
+const handleCopyToClipboard = async () => {
+  if (!currentCommit.value?.code) return
+
+  try {
+    await navigator.clipboard.writeText(currentCommit.value.code)
+    ElMessage.success('已复制到剪贴板')
+  } catch (error) {
+    ElMessage.error('复制失败')
+  }
+}
+
+const handleCopyToEditor = () => {
+  if (!currentCommit.value?.code || !currentCommit.value.languageId) return
+
+  emit('copyToEditor', currentCommit.value.code, currentCommit.value.languageId)
+  ElMessage.success('已复制到编辑器')
+  dialogVisible.value = false
+}
+
+const highlightedCode = computed(() => {
+  if (!currentCommit.value?.code) return ''
+  let lang = languageStore.getLanguageName(currentCommit.value.languageId)
+  
+  let language = 'plaintext'
+
+  // 语言映射
+  const langMap: Record<string, string> = {
+    'C++': 'cpp',
+    'C': 'c',
+    'Java': 'java',
+    'Python': 'python',
+    'Python3': 'python',
+    'Golang': 'go',
+    'JavaScript': 'javascript',
+    'TypeScript': 'typescript'
+  }
+
+  language = langMap[lang] || lang.toLowerCase()
+  try {
+    return hljs.highlight(currentCommit.value.code, { language }).value
+  } catch (e) {
+    try {
+      return hljs.highlightAuto(currentCommit.value.code).value
+    } catch {
+      return currentCommit.value.code
+    }
+  }
+})
+
 onMounted(() => {
   loadCommits()
 })
@@ -219,15 +289,23 @@ onMounted(() => {
           <div class="detail-section code-section">
             <div class="section-header">
               <h4>提交代码</h4>
-              <el-button
-                type="primary"
-                size="small"
-                @click="analyzeComplexity"
-              >
-                分析复杂度
-              </el-button>
+              <div class="code-actions">
+                <el-button size="small" @click="handleCopyToClipboard">
+                  复制代码
+                </el-button>
+                <el-button size="small" type="success" @click="handleCopyToEditor">
+                  复制到编辑器
+                </el-button>
+                <el-button
+                  size="small"
+                  type="primary"
+                  @click="analyzeComplexity"
+                >
+                  分析复杂度
+                </el-button>
+              </div>
             </div>
-            <pre class="code-block"><code>{{ currentCommit.code }}</code></pre>
+            <pre class="code-block"><code v-html="highlightedCode"></code></pre>
           </div>
         </div>
       </div>
@@ -335,26 +413,34 @@ onMounted(() => {
             justify-content: space-between;
             align-items: center;
             margin-bottom: 12px;
+
+            .code-actions {
+              display: flex;
+              gap: 8px;
+            }
           }
 
           .code-block {
             margin: 0;
             padding: 16px;
-            background: #f5f5f5;
+            background: #f6f8fa;
             border: 1px solid #e8e8e8;
             border-radius: 8px;
             overflow-x: auto;
             font-size: 13px;
             line-height: 1.6;
-            color: #333;
-            font-family: 'Courier New', Courier, monospace;
+            font-family: 'Fira Code', 'Courier New', Courier, monospace;
             max-height: 400px;
             overflow-y: auto;
 
             code {
               display: block;
-              white-space: pre-wrap;
-              word-wrap: break-word;
+              white-space: pre;
+            }
+
+            :deep(.hljs) {
+              background: transparent;
+              padding: 0;
             }
           }
         }

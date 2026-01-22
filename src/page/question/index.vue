@@ -9,6 +9,7 @@ import QuestionEditor from '@/components/QuestionEditor.vue'
 import TestCaseEditor from '@/components/TestCaseEditor.vue'
 import TestResult from '@/components/TestResult.vue'
 import SubmissionList from '@/components/SubmissionList.vue'
+import SolutionList from '@/components/SolutionList.vue'
 import useQuestionStore from '@/store/useQuestionStore'
 
 type TabType = 'description' | 'solution' | 'submissions' | 'testcases' | 'testresult'
@@ -224,6 +225,14 @@ const handleSubmit = async () => {
   }
 }
 
+const handleCopyToEditor = (code: string, languageId: number) => {
+  if (!questionEditorRef.value) return
+
+  questionEditorRef.value.setCode(code)
+  questionEditorRef.value.setLanguage(languageId)
+  activeTab.value = 'description'
+}
+
 // 从 URL 读取初始 tab
 onMounted(() => {
   const tabParam = route.query.tab as TabType
@@ -269,10 +278,15 @@ watch(activeTab, (newTab) => {
             :content="question.content"
             :difficulty="question.difficulty"
           />
-          <div v-else-if="activeTab === 'solution'" class="empty-placeholder">
-            题解功能开发中
-          </div>
-          <SubmissionList v-else-if="activeTab === 'submissions'" :question-id="questionId" />
+          <SolutionList
+            v-else-if="activeTab === 'solution'"
+            :question-id="questionId"
+          />
+          <SubmissionList
+            v-else-if="activeTab === 'submissions'"
+            :question-id="questionId"
+            @copy-to-editor="handleCopyToEditor"
+          />
           <TestCaseEditor v-else-if="activeTab === 'testcases'" :question-id="questionId" />
           <TestResult
             v-else-if="activeTab === 'testresult'"

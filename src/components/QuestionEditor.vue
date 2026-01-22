@@ -88,9 +88,19 @@ const getLanguageId = () => {
   return selectedLanguageId.value
 }
 
+const setCode = (newCode: string) => {
+  code.value = newCode
+}
+
+const setLanguage = (languageId: number) => {
+  selectedLanguageId.value = languageId
+}
+
 defineExpose({
   getCode,
-  getLanguageId
+  getLanguageId,
+  setCode,
+  setLanguage
 })
 </script>
 
