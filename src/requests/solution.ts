@@ -1,8 +1,13 @@
 import request from '../utils/request'
 
+export interface User {
+  username: string
+}
+
 export interface Solution {
   id: number
   userId: number
+  user: User
   questionId: number
   title: string
   content: string

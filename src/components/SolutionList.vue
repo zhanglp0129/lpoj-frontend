@@ -249,8 +249,8 @@ const checkAndLoadMore = (container: HTMLElement) => {
       <template v-if="!loading && !loadingDetail">
         <el-table v-show="!isDetailView && solutions.length > 0" :data="solutions" style="width: 100%"
           @row-click="showDetail" :show-header="true" :border="true">
-          <el-table-column prop="id" label="题解ID" width="80" />
           <el-table-column prop="title" label="标题" min-width="200" />
+          <el-table-column prop="user.username" label="作者" min-width="120" />
           <el-table-column prop="likeNum" label="点赞数" width="100">
             <template #default="{ row }">
               <span class="like-count"><img :src="likeFilledSvg" alt="like" style="width: 16px; height: 16px;" /> {{ row.likeNum }}</span>
@@ -288,6 +288,10 @@ const checkAndLoadMore = (container: HTMLElement) => {
           <div class="detail-content">
             <div class="detail-header">
               <h3>{{ currentSolution?.title }}</h3>
+              <div class="author-badge">
+                <span class="author-label">作者：</span>
+                <span class="author-name">{{ currentSolution?.user?.username }}</span>
+              </div>
               <div class="meta-info">
                 <el-tooltip :content="isLiked ? '取消点赞' : '点赞'" placement="top">
                   <div class="like-icon" @click="handleLike" :class="{ 'liking': isLiking }">
@@ -456,10 +460,25 @@ const checkAndLoadMore = (container: HTMLElement) => {
       border-bottom: 1px solid #e8e8e8;
 
       h3 {
-        margin: 0 0 12px 0;
+        margin: 0 0 8px 0;
         font-size: 20px;
         font-weight: 600;
         color: #333;
+      }
+
+      .author-badge {
+        margin-bottom: 12px;
+        font-size: 14px;
+        color: #666;
+
+        .author-label {
+          font-weight: 500;
+        }
+
+        .author-name {
+          color: #1890ff;
+          font-weight: 500;
+        }
       }
 
       .meta-info {
