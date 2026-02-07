@@ -60,3 +60,19 @@ export const querySolutionLikeService = async (solutionId: number) => {
 export const likeSolutionService = async (solutionId: number, cancel: boolean) => {
   return request.post('/solution/like', null, { params: { solutionId, cancel } })
 }
+
+export const addSolutionService = async (data: {
+  questionId: number
+  title: string
+  content: string
+}) => {
+  const resp = await request.post<any, { success: boolean; data: { id: number } }>(
+    '/solution/add',
+    {
+      questionId: data.questionId,
+      title: data.title,
+      content: data.content
+    }
+  )
+  return resp.data
+}

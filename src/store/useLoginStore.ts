@@ -7,11 +7,12 @@ export default defineStore('login', () => {
   const token = ref('')
   const role = ref(0)
   const userId = ref(0)
+  const username = ref('')
   const isLogin = computed(() => token.value.length > 0)
-  return { token, role, userId, isLogin }
+  return { token, role, userId, username, isLogin }
 }, {
   // 持久化相关配置
   persist: {
-    pick: ['token', 'role', 'userId'],
+    pick: ['token', 'role', 'userId', 'username'],
   }
 })

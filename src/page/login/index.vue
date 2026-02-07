@@ -61,6 +61,7 @@ const handleLogin = async () => {
     loginStore.token = data.token
     loginStore.role = data.role
     loginStore.userId = data.userId
+    loginStore.username = loginForm.username
     ElMessage.success('登录成功')
     router.push('/')
   } catch (error) {
@@ -208,7 +209,7 @@ const switchMode = () => {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
+  height: calc(100vh - 48px);
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 

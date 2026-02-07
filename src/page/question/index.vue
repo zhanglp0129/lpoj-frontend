@@ -24,6 +24,7 @@ const testResultType = ref<'self' | 'commit'>('self')
 const questionStore = useQuestionStore()
 
 const questionEditorRef = ref<InstanceType<typeof QuestionEditor> | null>(null)
+const solutionListRef = ref<InstanceType<typeof SolutionList> | null>(null)
 
 const tabs = [
   { label: '题目描述', value: 'description' as TabType },
@@ -39,6 +40,11 @@ const question = ref<{
   content: string
   difficulty: number
 } | null>(null)
+
+// 跳转到题解编辑器
+const goToSolutionEditor = () => {
+  router.push(`/question/${questionId.value}/solution-editor`)
+}
 
 const loadQuestion = async () => {
   loading.value = true
@@ -235,18 +241,26 @@ const handleCopyToEditor = (code: string, languageId: number) => {
 
 // 从 URL 读取初始 tab
 onMounted(() => {
-  const tabParam = route.query.tab as TabType
+  const tabParam = route.params.tab as TabType
   if (tabParam && tabs.some(t => t.value === tabParam)) {
     activeTab.value = tabParam
+  } else {
+    // 默认显示 description，如果不是 tab 路径
+    if (route.params.tab === undefined) {
+      activeTab.value = 'description'
+    }
   }
   loadQuestion()
 })
 
 // 监听 tab 变化并更新 URL
 watch(activeTab, (newTab) => {
-  router.replace({
-    query: { tab: newTab }
-  })
+  // 使用路径参数而不是查询参数
+  if (newTab === 'description') {
+    router.replace(`/question/${questionId.value}`)
+  } else {
+    router.replace(`/question/${questionId.value}/${newTab}`)
+  }
 })
 </script>
 
@@ -280,6 +294,7 @@ watch(activeTab, (newTab) => {
           />
           <SolutionList
             v-else-if="activeTab === 'solution'"
+            ref="solutionListRef"
             :question-id="questionId"
           />
           <SubmissionList
@@ -305,12 +320,12 @@ watch(activeTab, (newTab) => {
 <style lang="scss" scoped>
 .question-page {
   width: 100%;
-  height: 100vh;
+  height: calc(100vh - 48px);
   background: #f5f7fa;
   padding: 0 24px 24px 24px;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 
   .page-header {
     padding: 2px 0;

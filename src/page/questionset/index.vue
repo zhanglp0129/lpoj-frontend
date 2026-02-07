@@ -166,7 +166,9 @@ onMounted(() => {
   margin: 24px auto;
   padding: 24px;
   background: #f5f7fa;
-  min-height: calc(100vh - 48px);
+  height: calc(100vh - 48px - 48px);
+  overflow: auto;
+  box-sizing: border-box;
 }
 
 .header {
