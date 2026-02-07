@@ -74,5 +74,5 @@ export const addSolutionService = async (data: {
       content: data.content
     }
   )
-  return resp.data
+  return resp
 }

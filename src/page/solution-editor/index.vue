@@ -15,11 +15,12 @@ const publishing = ref(false)
 const handlePublish = async (solution: { title: string; content: string }) => {
   publishing.value = true
   try {
-    const res = await addSolutionService({
+    let res: any = await addSolutionService({
       questionId: questionId.value,
       title: solution.title,
       content: solution.content
     })
+    res = res.data
 
     if (res.success) {
       ElMessage.success('题解发布成功')
