@@ -4,12 +4,12 @@ import { useRoute, useRouter } from 'vue-router'
 import { queryQuestionByIdService } from '@/requests/question'
 import { selfTestService, commitService } from '@/requests/commit'
 import { ElMessage } from 'element-plus'
-import QuestionDescription from '@/components/QuestionDescription.vue'
-import QuestionEditor from '@/components/QuestionEditor.vue'
-import TestCaseEditor from '@/components/TestCaseEditor.vue'
-import TestResult from '@/components/TestResult.vue'
-import SubmissionList from '@/components/SubmissionList.vue'
-import SolutionList from '@/components/SolutionList.vue'
+import QuestionDescription from './components/QuestionDescription.vue'
+import QuestionEditor from './components/QuestionEditor.vue'
+import TestCaseEditor from './components/TestCaseEditor.vue'
+import TestResult from './components/TestResult.vue'
+import SubmissionList from './components/SubmissionList.vue'
+import SolutionList from './components/SolutionList.vue'
 import useQuestionStore from '@/store/useQuestionStore'
 
 type TabType = 'description' | 'solution' | 'submissions' | 'testcases' | 'testresult'
@@ -24,7 +24,6 @@ const testResultType = ref<'self' | 'commit'>('self')
 const questionStore = useQuestionStore()
 
 const questionEditorRef = ref<InstanceType<typeof QuestionEditor> | null>(null)
-const solutionListRef = ref<InstanceType<typeof SolutionList> | null>(null)
 
 const tabs = [
   { label: '题目描述', value: 'description' as TabType },
@@ -40,11 +39,6 @@ const question = ref<{
   content: string
   difficulty: number
 } | null>(null)
-
-// 跳转到题解编辑器
-const goToSolutionEditor = () => {
-  router.push(`/question/${questionId.value}/solution-editor`)
-}
 
 const loadQuestion = async () => {
   loading.value = true
@@ -294,7 +288,6 @@ watch(activeTab, (newTab) => {
           />
           <SolutionList
             v-else-if="activeTab === 'solution'"
-            ref="solutionListRef"
             :question-id="questionId"
           />
           <SubmissionList

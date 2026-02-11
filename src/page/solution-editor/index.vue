@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import SolutionEditor from '@/components/SolutionEditor.vue'
+import SolutionEditor from './components/SolutionEditor.vue'
 import { addSolutionService } from '@/requests/solution'
 
 const route = useRoute()
@@ -68,7 +68,7 @@ const handleBack = () => {
 <style lang="scss" scoped>
 .solution-editor-page {
   width: 100%;
-  height: 100vh;
+  height: calc(100vh - 48px);
   background: #f5f7fa;
   display: flex;
   flex-direction: column;
@@ -91,7 +91,10 @@ const handleBack = () => {
   }
 
   .editor-container {
+    height: 100%;
     flex: 1;
+    min-height: 0;
+    display: flex;
     padding: 24px;
     overflow: hidden;
     background: white;

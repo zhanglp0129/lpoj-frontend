@@ -1,17 +1,9 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import gfm from '@bytemd/plugin-gfm'
-import highlight from '@bytemd/plugin-highlight'
-import math from '@bytemd/plugin-math'
-import 'bytemd/dist/index.css'
 import { ElMessage } from 'element-plus'
-import zhHans from 'bytemd/locales/zh_Hans.json'
 import { getAllLanguagesService } from '@/requests/commit'
 import { queryQuestionByIdService } from '@/requests/question'
-
-// 直接导入并转换
-import * as Bytemd from '@bytemd/vue-next'
-const Editor = Bytemd.Editor
+import MarkdownEditor from './MarkdownEditor.vue'
 
 interface Language {
   id: number
@@ -37,8 +29,6 @@ const emit = defineEmits<{
   publish: [solution: { title: string; content: string }]
   cancel: []
 }>()
-
-const plugins = [gfm(), highlight(), math()]
 
 const title = ref('')
 const content = ref('')
@@ -137,14 +127,13 @@ const loadDraft = async () => {
   }
 }
 
-// 处理内容变化
-const handleContentChange = (v: string) => {
-  content.value = v
-  debouncedSaveDraft()
-}
-
 // 监听标题变化，自动保存
 watch(title, () => {
+  debouncedSaveDraft()
+})
+
+// 监听内容变化，自动保存
+watch(content, () => {
   debouncedSaveDraft()
 })
 
@@ -213,42 +202,23 @@ defineExpose({
 <template>
   <div class="solution-editor">
     <div class="editor-header">
-      <input
-        v-model="title"
-        type="text"
-        class="title-input"
-        placeholder="请输入题解标题"
-      />
+      <input v-model="title" type="text" class="title-input" placeholder="请输入题解标题" />
       <div class="action-buttons">
-        <el-button
-          type="primary"
-          @click="handlePublish"
-          :loading="isPublishing"
-          :disabled="!canPublish"
-        >
+        <el-button type="primary" @click="handlePublish" :loading="isPublishing" :disabled="!canPublish">
           发布题解
         </el-button>
       </div>
     </div>
     <div class="editor-content">
-      <Editor
-        :value="content"
-        :plugins="plugins"
-        :locale="zhHans"
-        :placeholder="'请输入题解内容，支持 Markdown 语法'"
-        mode="split"
-        @change="handleContentChange"
-      />
+      <MarkdownEditor v-model="content" placeholder="请输入题解内容，支持 Markdown 语法" mode="split" />
     </div>
   </div>
 </template>
 
 <style lang="scss" scoped>
 .solution-editor {
-  display: flex;
-  flex-direction: column;
   height: 100%;
-  overflow: hidden;
+  width: 100%;
 
   .editor-header {
     display: flex;
@@ -287,79 +257,8 @@ defineExpose({
   }
 
   .editor-content {
-    flex: 1;
-    overflow: hidden;
+    height: 100%;
     background: #fff;
-    display: flex;
-    flex-direction: column;
-  }
-}
-</style>
-
-<style lang="scss">
-// ByteMD 全局样式
-.bytemd {
-  height: 100% !important;
-  display: flex !important;
-  flex-direction: column !important;
-
-  .bytemd-toolbar {
-    flex-shrink: 0 !important;
-  }
-
-  .bytemd-body {
-    flex: 1 !important;
-    display: flex !important;
-    overflow: hidden !important;
-    height: 100% !important;
-
-    .bytemd-editor {
-      flex: 1 !important;
-      border-right: 1px solid #e8e8e8 !important;
-      display: flex !important;
-      flex-direction: column !important;
-      overflow: hidden !important;
-      height: 100% !important;
-
-      .cm-editor {
-        flex: 1 !important;
-        height: 100% !important;
-        overflow-y: auto !important;
-        overflow-x: auto !important;
-
-        .cm-scroller {
-          height: 100% !important;
-          overflow: auto !important;
-
-          .cm-content {
-            min-height: 100%;
-          }
-        }
-      }
-    }
-
-    .bytemd-preview {
-      flex: 1 !important;
-      overflow-y: auto !important;
-      overflow-x: hidden !important;
-      padding: 16px !important;
-      height: 100% !important;
-
-      .markdown-body {
-        font-size: 14px;
-        line-height: 1.8;
-
-        pre {
-          code {
-            font-size: 13px;
-          }
-        }
-
-        code {
-          font-size: 13px;
-        }
-      }
-    }
   }
 }
 </style>

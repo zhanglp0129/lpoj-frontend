@@ -1,9 +1,8 @@
 <script lang="ts" setup>
-import { ref, computed, nextTick } from 'vue'
+import { ref, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElSelect, ElOption, ElTable, ElMessage } from 'element-plus'
 import { pageSolutionService, type Solution } from '@/requests/solution'
-import likeSvg from '@/assets/like.svg'
 import likeFilledSvg from '@/assets/like_filled.svg'
 
 type OrderByType = 'update_time' | 'like_num'

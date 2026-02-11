@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { computed, watch } from 'vue'
+import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import SolutionListContent from './SolutionListContent.vue'
 import SolutionDetail from './SolutionDetail.vue'
@@ -51,4 +51,3 @@ const viewDetail = (solution: Solution) => {
   height: 100%;
 }
 </style>
-

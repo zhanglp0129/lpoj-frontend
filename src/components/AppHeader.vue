@@ -28,8 +28,11 @@ const handleChangePassword = () => {
 }
 
 const handleAdmin = () => {
-  // TODO: 实现管理员功能
-  ElMessage.info('管理员功能待实现')
+  router.push('/admin')
+}
+
+const handleLogoClick = () => {
+  router.push('/')
 }
 </script>
 
@@ -37,7 +40,7 @@ const handleAdmin = () => {
   <div class="app-header">
     <div class="header-container">
       <div class="header-left">
-        <h1 class="logo">LPOJ</h1>
+        <h1 class="logo" @click="handleLogoClick">LPOJ</h1>
       </div>
       <div class="header-right">
         <template v-if="loginStore.isLogin">
