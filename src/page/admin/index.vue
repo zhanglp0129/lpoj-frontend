@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Refresh, Search } from '@element-plus/icons-vue'
-import { questionPageService } from '@/requests/question'
+import { deleteQuestionService, questionPageService } from '@/requests/question'
 
 type AdminMenuKey = 'question-manage' | 'testcase-manage'
 
@@ -13,6 +14,7 @@ interface QuestionItem {
 }
 
 const activeMenu = ref<AdminMenuKey>('question-manage')
+const router = useRouter()
 
 const loading = ref(false)
 const questions = ref<QuestionItem[]>([])
@@ -91,8 +93,44 @@ const handleSizeChange = (size: number) => {
   loadQuestions()
 }
 
-const handleQuestionAction = (action: '查看' | '修改' | '删除', row: QuestionItem) => {
-  ElMessage.info(`${action}题目：${row.id} - ${row.title}`)
+const handleEditQuestion = (row: QuestionItem) => {
+  router.push(`/admin/question/edit/${row.id}`)
+}
+
+const handleRowClick = (row: QuestionItem) => {
+  router.push(`/question/${row.id}`)
+}
+
+const handleDeleteQuestion = async (row: QuestionItem) => {
+  try {
+    await ElMessageBox.confirm(
+      `确认删除题目「${row.title}」吗？`,
+      '删除确认',
+      {
+        confirmButtonText: '确认',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    const res: any = await deleteQuestionService(row.id)
+    if (!res.data?.success) {
+      ElMessage.error('删除失败')
+      return
+    }
+
+    ElMessage.success('删除成功')
+
+    if (questions.value.length === 1 && queryParams.value.pageNum > 1) {
+      queryParams.value.pageNum -= 1
+    }
+    loadQuestions()
+  } catch (error: any) {
+    if (error === 'cancel') {
+      return
+    }
+    ElMessage.error(error?.message || '删除失败')
+  }
 }
 
 const handleMenuChange = (index: string) => {
@@ -100,6 +138,10 @@ const handleMenuChange = (index: string) => {
   if (activeMenu.value === 'question-manage') {
     loadQuestions()
   }
+}
+
+const handleAddQuestion = () => {
+  router.push('/admin/question/create')
 }
 
 onMounted(() => {
@@ -153,13 +195,18 @@ onMounted(() => {
                 重置
               </el-button>
             </div>
-            <el-button type="primary" :icon="Plus">
+            <el-button type="primary" :icon="Plus" @click="handleAddQuestion">
               添加题目
             </el-button>
           </div>
 
           <div class="table-card" v-loading="loading">
-            <el-table :data="questions" stripe style="width: 100%">
+            <el-table
+              :data="questions"
+              stripe
+              style="width: 100%"
+              @row-click="handleRowClick"
+            >
               <el-table-column prop="id" label="题目ID" width="100" />
               <el-table-column prop="title" label="标题" min-width="320" />
               <el-table-column label="难度" width="120">
@@ -174,21 +221,14 @@ onMounted(() => {
                   <el-button
                     link
                     type="primary"
-                    @click="handleQuestionAction('查看', row)"
-                  >
-                    查看
-                  </el-button>
-                  <el-button
-                    link
-                    type="primary"
-                    @click="handleQuestionAction('修改', row)"
+                    @click.stop="handleEditQuestion(row)"
                   >
                     修改
                   </el-button>
                   <el-button
                     link
                     type="danger"
-                    @click="handleQuestionAction('删除', row)"
+                    @click.stop="handleDeleteQuestion(row)"
                   >
                     删除
                   </el-button>
@@ -277,6 +317,14 @@ onMounted(() => {
   padding: 20px;
   overflow: auto;
   box-sizing: border-box;
+
+  :deep(.el-table__body tr) {
+    cursor: pointer;
+  }
+
+  :deep(.el-table__body tr:hover > td) {
+    background-color: #f5f7fa;
+  }
 
   .pagination {
     margin-top: 20px;

@@ -35,6 +35,14 @@ export default createRouter({
     {
       path: '/admin',
       component: () => import('../page/admin/index.vue')
+    },
+    {
+      path: '/admin/question/create',
+      component: () => import('../page/admin/question-editor/index.vue')
+    },
+    {
+      path: '/admin/question/edit/:id',
+      component: () => import('../page/admin/question-editor/index.vue')
     }
   ]
 })

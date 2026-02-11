@@ -3,7 +3,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getAllLanguagesService } from '@/requests/commit'
 import { queryQuestionByIdService } from '@/requests/question'
-import MarkdownEditor from './MarkdownEditor.vue'
+import MarkdownEditor from '../../../components/MarkdownEditor.vue'
 
 interface Language {
   id: number

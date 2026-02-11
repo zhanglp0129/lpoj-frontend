@@ -1,52 +1,26 @@
 <script lang="ts" setup>
-import { computed, onMounted } from 'vue'
-import { marked } from 'marked'
-import hljs from 'highlight.js/lib/core'
-import javascript from 'highlight.js/lib/languages/javascript'
-import typescript from 'highlight.js/lib/languages/typescript'
-import python from 'highlight.js/lib/languages/python'
-import cpp from 'highlight.js/lib/languages/cpp'
-import java from 'highlight.js/lib/languages/java'
-import { Renderer } from 'marked'
-import type { Tokens } from 'marked'
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import 'highlight.js/styles/github.css'
+import gfm from '@bytemd/plugin-gfm'
+import highlight from '@bytemd/plugin-highlight'
+import breaks from '@bytemd/plugin-breaks'
+import math from '@bytemd/plugin-math'
+import * as Bytemd from '@bytemd/vue-next'
+import 'bytemd/dist/index.css'
+import 'juejin-markdown-themes/dist/juejin.min.css'
+import 'katex/dist/katex.min.css'
 
-hljs.registerLanguage('javascript', javascript)
-hljs.registerLanguage('typescript', typescript)
-hljs.registerLanguage('python', python)
-hljs.registerLanguage('cpp', cpp)
-hljs.registerLanguage('java', java)
-
-const renderer = new Renderer()
-
-renderer.code = (code: Tokens.Code) => {
-  const { text, lang } = code
-  const language = lang || ''
-  const highlighted = language && hljs.getLanguage(language)
-    ? hljs.highlight(text, { language }).value
-    : hljs.highlightAuto(text).value
-
-  const escapedText = text.replace(/`/g, '&#96;').replace(/\\/g, '\\\\')
-
-  return `
-    <div class="code-block-wrapper">
-      <button class="copy-button" data-code="${escapedText}">
-        复制
-      </button>
-      <pre><code class="hljs language-${language}">${highlighted}</code></pre>
-    </div>
-  `
-}
-
-marked.use({ renderer })
-marked.setOptions({ breaks: true })
+const Viewer = (Bytemd as any).Viewer
+const plugins = [gfm(), highlight(), breaks(), math()]
 
 const props = defineProps<{
   title: string
   content: string
   difficulty: number
 }>()
+
+const contentEl = ref<HTMLElement | null>(null)
+let observer: MutationObserver | null = null
 
 const getDifficultyLabel = (difficulty: number) => {
   const map: Record<number, string> = {
@@ -66,40 +40,57 @@ const getDifficultyTagType = (difficulty: number) => {
   return map[difficulty] || 'info'
 }
 
-const renderedContent = computed(() => marked(props.content))
+const setupCopyButtons = () => {
+  if (!contentEl.value) return
 
-onMounted(() => {
-  const setupCopyButtons = () => {
-    const buttons = document.querySelectorAll('.copy-button')
-    buttons.forEach(button => {
-      const newButton = button.cloneNode(true)
-      button.parentNode?.replaceChild(newButton, button)
+  const preBlocks = contentEl.value.querySelectorAll('pre')
+  preBlocks.forEach(pre => {
+    if (pre.parentElement?.classList.contains('code-block-wrapper')) return
+    const codeEl = pre.querySelector('code')
+    if (!codeEl) return
 
-      newButton.addEventListener('click', async (e) => {
-        const target = e.currentTarget as HTMLElement
-        const code = target.getAttribute('data-code')
-        if (code) {
-          try {
-            await navigator.clipboard.writeText(code)
-            ElMessage.success('复制成功')
-          } catch (err) {
-            ElMessage.error('复制失败')
-          }
-        }
-      })
+    const wrapper = document.createElement('div')
+    wrapper.className = 'code-block-wrapper'
+    pre.parentNode?.insertBefore(wrapper, pre)
+    wrapper.appendChild(pre)
+
+    const button = document.createElement('button')
+    button.className = 'copy-button'
+    button.textContent = '复制'
+
+    button.addEventListener('click', async () => {
+      const code = codeEl.textContent || ''
+      try {
+        await navigator.clipboard.writeText(code)
+        ElMessage.success('复制成功')
+      } catch (err) {
+        ElMessage.error('复制失败')
+      }
     })
-  }
 
+    wrapper.appendChild(button)
+  })
+}
+
+onMounted(async () => {
+  await nextTick()
   setupCopyButtons()
 
-  const observer = new MutationObserver(() => {
+  if (!contentEl.value) return
+  observer = new MutationObserver(() => {
     setupCopyButtons()
   })
+  observer.observe(contentEl.value, { childList: true, subtree: true })
+})
 
-  const contentEl = document.querySelector('.markdown-content')
-  if (contentEl) {
-    observer.observe(contentEl, { childList: true, subtree: true })
-  }
+watch(() => props.content, async () => {
+  await nextTick()
+  setupCopyButtons()
+})
+
+onBeforeUnmount(() => {
+  observer?.disconnect()
+  observer = null
 })
 </script>
 
@@ -111,7 +102,9 @@ onMounted(() => {
         {{ getDifficultyLabel(difficulty) }}
       </el-tag>
     </div>
-    <div class="markdown-content" v-html="renderedContent"></div>
+    <div ref="contentEl" class="markdown-content">
+      <Viewer :value="content" :plugins="plugins" />
+    </div>
   </div>
 </template>
 
@@ -139,6 +132,12 @@ onMounted(() => {
   }
 
   .markdown-content {
+    :deep(.markdown-body) {
+      padding: 0;
+      background: transparent;
+      color: #333;
+    }
+
     :deep(p) {
       margin-bottom: 16px;
       line-height: 1.6;
@@ -278,6 +277,11 @@ onMounted(() => {
       border: none;
       border-top: 1px solid #e8e8e8;
       margin: 24px 0;
+    }
+
+    :deep(.katex-display) {
+      overflow-x: auto;
+      overflow-y: hidden;
     }
   }
 }
