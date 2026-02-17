@@ -5,15 +5,12 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Refresh, Search } from '@element-plus/icons-vue'
 import { deleteQuestionService, questionPageService } from '@/requests/question'
 
-type AdminMenuKey = 'question-manage' | 'testcase-manage'
-
 interface QuestionItem {
   id: number
   title: string
   difficulty: number
 }
 
-const activeMenu = ref<AdminMenuKey>('question-manage')
 const router = useRouter()
 
 const loading = ref(false)
@@ -49,9 +46,6 @@ const getDifficultyTagType = (difficulty: number) => {
 }
 
 const loadQuestions = async () => {
-  if (activeMenu.value !== 'question-manage') {
-    return
-  }
   loading.value = true
   try {
     const res = await questionPageService({
@@ -97,6 +91,10 @@ const handleEditQuestion = (row: QuestionItem) => {
   router.push(`/admin/question/edit/${row.id}`)
 }
 
+const handleEditTestCase = (row: QuestionItem) => {
+  router.push(`/admin/question/${row.id}/testcases`)
+}
+
 const handleRowClick = (row: QuestionItem) => {
   router.push(`/question/${row.id}`)
 }
@@ -133,13 +131,6 @@ const handleDeleteQuestion = async (row: QuestionItem) => {
   }
 }
 
-const handleMenuChange = (index: string) => {
-  activeMenu.value = index as AdminMenuKey
-  if (activeMenu.value === 'question-manage') {
-    loadQuestions()
-  }
-}
-
 const handleAddQuestion = () => {
   router.push('/admin/question/create')
 }
@@ -154,105 +145,103 @@ onMounted(() => {
     <div class="admin-layout">
       <aside class="admin-sidebar">
         <el-menu
-          :default-active="activeMenu"
+          default-active="question-manage"
           class="admin-menu"
-          @select="handleMenuChange"
         >
           <el-menu-item index="question-manage">题目管理</el-menu-item>
-          <el-menu-item index="testcase-manage">测试用例管理</el-menu-item>
         </el-menu>
       </aside>
 
       <main class="admin-content">
-        <template v-if="activeMenu === 'question-manage'">
-          <div class="toolbar-card">
-            <div class="search-bar">
-              <el-input
-                v-model="queryParams.title"
-                placeholder="按标题搜索题目"
-                :prefix-icon="Search"
-                clearable
-                style="width: 280px"
-                @keyup.enter="handleSearch"
+        <div class="toolbar-card">
+          <div class="search-bar">
+            <el-input
+              v-model="queryParams.title"
+              placeholder="按标题搜索题目"
+              :prefix-icon="Search"
+              clearable
+              style="width: 280px"
+              @keyup.enter="handleSearch"
+            />
+            <el-select
+              v-model="queryParams.difficulty"
+              placeholder="选择难度"
+              clearable
+              style="width: 120px"
+            >
+              <el-option
+                v-for="item in difficultyOptions"
+                :key="item.label"
+                :label="item.label"
+                :value="item.value"
               />
-              <el-select
-                v-model="queryParams.difficulty"
-                placeholder="选择难度"
-                clearable
-                style="width: 120px"
-              >
-                <el-option
-                  v-for="item in difficultyOptions"
-                  :key="item.label"
-                  :label="item.label"
-                  :value="item.value"
-                />
-              </el-select>
-              <el-button type="primary" :icon="Search" @click="handleSearch">
-                搜索
-              </el-button>
-              <el-button :icon="Refresh" @click="handleReset">
-                重置
-              </el-button>
-            </div>
-            <el-button type="primary" :icon="Plus" @click="handleAddQuestion">
-              添加题目
+            </el-select>
+            <el-button type="primary" :icon="Search" @click="handleSearch">
+              搜索
+            </el-button>
+            <el-button :icon="Refresh" @click="handleReset">
+              重置
             </el-button>
           </div>
+          <el-button type="primary" :icon="Plus" @click="handleAddQuestion">
+            添加题目
+          </el-button>
+        </div>
 
-          <div class="table-card" v-loading="loading">
-            <el-table
-              :data="questions"
-              stripe
-              style="width: 100%"
-              @row-click="handleRowClick"
-            >
-              <el-table-column prop="id" label="题目ID" width="100" />
-              <el-table-column prop="title" label="标题" min-width="320" />
-              <el-table-column label="难度" width="120">
-                <template #default="{ row }">
-                  <el-tag :type="getDifficultyTagType(row.difficulty)">
-                    {{ getDifficultyLabel(row.difficulty) }}
-                  </el-tag>
-                </template>
-              </el-table-column>
-              <el-table-column label="操作" width="240" fixed="right">
-                <template #default="{ row }">
-                  <el-button
-                    link
-                    type="primary"
-                    @click.stop="handleEditQuestion(row)"
-                  >
-                    修改
-                  </el-button>
-                  <el-button
-                    link
-                    type="danger"
-                    @click.stop="handleDeleteQuestion(row)"
-                  >
-                    删除
-                  </el-button>
-                </template>
-              </el-table-column>
-            </el-table>
+        <div class="table-card" v-loading="loading">
+          <el-table
+            :data="questions"
+            stripe
+            style="width: 100%"
+            @row-click="handleRowClick"
+          >
+            <el-table-column prop="id" label="题目ID" width="100" />
+            <el-table-column prop="title" label="标题" min-width="320" />
+            <el-table-column label="难度" width="120">
+              <template #default="{ row }">
+                <el-tag :type="getDifficultyTagType(row.difficulty)">
+                  {{ getDifficultyLabel(row.difficulty) }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="340" fixed="right">
+              <template #default="{ row }">
+                <el-button
+                  link
+                  type="primary"
+                  @click.stop="handleEditQuestion(row)"
+                >
+                  修改
+                </el-button>
+                <el-button
+                  link
+                  type="primary"
+                  @click.stop="handleEditTestCase(row)"
+                >
+                  编辑测试用例
+                </el-button>
+                <el-button
+                  link
+                  type="danger"
+                  @click.stop="handleDeleteQuestion(row)"
+                >
+                  删除
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
 
-            <div class="pagination">
-              <el-pagination
-                v-model:current-page="queryParams.pageNum"
-                v-model:page-size="queryParams.pageSize"
-                :page-sizes="[10, 20, 50, 100]"
-                :total="total"
-                layout="total, sizes, prev, pager, next, jumper"
-                @current-change="handlePageChange"
-                @size-change="handleSizeChange"
-              />
-            </div>
+          <div class="pagination">
+            <el-pagination
+              v-model:current-page="queryParams.pageNum"
+              v-model:page-size="queryParams.pageSize"
+              :page-sizes="[10, 20, 50, 100]"
+              :total="total"
+              layout="total, sizes, prev, pager, next, jumper"
+              @current-change="handlePageChange"
+              @size-change="handleSizeChange"
+            />
           </div>
-        </template>
-
-        <div v-else class="todo-card">
-          <h2>测试用例管理</h2>
-          <p>TODO</p>
         </div>
       </main>
     </div>
@@ -330,27 +319,6 @@ onMounted(() => {
     margin-top: 20px;
     display: flex;
     justify-content: flex-end;
-  }
-}
-
-.todo-card {
-  height: 100%;
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  padding: 24px;
-  box-sizing: border-box;
-
-  h2 {
-    margin: 0 0 12px;
-    font-size: 20px;
-    color: #303133;
-  }
-
-  p {
-    margin: 0;
-    color: #909399;
-    font-size: 16px;
   }
 }
 </style>
